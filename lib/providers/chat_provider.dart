@@ -5,21 +5,42 @@ import '../models/chat_message.dart';
 import '../services/ai_service.dart';
 import '../services/storage_service.dart';
 
-/// Manages the chatbot conversation state with multi-provider support.
+/// Manages the chatbot conversation state with runtime provider/model switching.
 class ChatProvider extends ChangeNotifier {
   List<ChatMessage> _messages = [];
   bool _isLoading = false;
   String? _currentBookId;
 
+  /// Runtime overrides — null means "use the global setting from Settings".
+  String? _runtimeProviderId;
+  String? _runtimeModel;
+
   List<ChatMessage> get messages => _messages;
   bool get isLoading => _isLoading;
 
-  AiProvider get activeProvider =>
-      AiProviders.getById(StorageService.getActiveProviderId());
+  AiProvider get activeProvider => AiProviders.getById(
+      _runtimeProviderId ?? StorageService.getActiveProviderId());
 
   String get activeModel =>
+      _runtimeModel ??
       StorageService.getProviderModel(activeProvider.id) ??
       activeProvider.defaultModel;
+
+  /// Returns only providers that have an API key configured (plus Custom).
+  List<AiProvider> get configuredProviders {
+    return AiProviders.all.where((p) {
+      if (p.id == 'custom') return true;
+      final key = StorageService.getProviderApiKey(p.id) ?? '';
+      return key.isNotEmpty;
+    }).toList();
+  }
+
+  /// Switches provider and model at runtime from the chat panel.
+  void switchModel(String providerId, String model) {
+    _runtimeProviderId = providerId;
+    _runtimeModel = model;
+    notifyListeners();
+  }
 
   void loadMessages(String bookId) {
     _currentBookId = bookId;
@@ -27,7 +48,6 @@ class ChatProvider extends ChangeNotifier {
     notifyListeners();
   }
 
-  /// Sends a user message and gets an AI response from the active provider.
   Future<void> sendMessage({
     required String content,
     String? selectedText,
