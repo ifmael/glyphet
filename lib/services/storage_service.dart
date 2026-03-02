@@ -110,4 +110,56 @@ class StorageService {
     final box = Hive.box(_settingsBox);
     await box.put('dark_mode', value);
   }
+
+  // ── Reader Settings ──
+
+  static String getReaderThemeId() {
+    final box = Hive.box(_settingsBox);
+    return box.get('reader_theme_id', defaultValue: 'paper') as String;
+  }
+
+  static Future<void> setReaderThemeId(String id) async {
+    final box = Hive.box(_settingsBox);
+    await box.put('reader_theme_id', id);
+  }
+
+  static String getReaderFontFamily() {
+    final box = Hive.box(_settingsBox);
+    return box.get('reader_font_family', defaultValue: 'Literata') as String;
+  }
+
+  static Future<void> setReaderFontFamily(String family) async {
+    final box = Hive.box(_settingsBox);
+    await box.put('reader_font_family', family);
+  }
+
+  static double getReaderFontSize() {
+    final box = Hive.box(_settingsBox);
+    return (box.get('reader_font_size', defaultValue: 18.0) as num).toDouble();
+  }
+
+  static Future<void> setReaderFontSize(double size) async {
+    final box = Hive.box(_settingsBox);
+    await box.put('reader_font_size', size);
+  }
+
+  static double getReaderFontContrast() {
+    final box = Hive.box(_settingsBox);
+    return (box.get('reader_font_contrast', defaultValue: 1.0) as num).toDouble();
+  }
+
+  static Future<void> setReaderFontContrast(double contrast) async {
+    final box = Hive.box(_settingsBox);
+    await box.put('reader_font_contrast', contrast);
+  }
+
+  static double getReaderLineHeight() {
+    final box = Hive.box(_settingsBox);
+    return (box.get('reader_line_height', defaultValue: 1.7) as num).toDouble();
+  }
+
+  static Future<void> setReaderLineHeight(double height) async {
+    final box = Hive.box(_settingsBox);
+    await box.put('reader_line_height', height);
+  }
 }
