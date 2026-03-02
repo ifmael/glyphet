@@ -317,16 +317,66 @@ class _ProviderConfigCardState extends State<_ProviderConfigCard> {
                   Tooltip(
                     message: 'Get API key',
                     child: IconButton(
-                      icon: const Icon(Icons.open_in_new, size: 18),
+                      icon: const Icon(Icons.key_rounded, size: 18),
                       onPressed: () {
                         ScaffoldMessenger.of(context).showSnackBar(
-                          SnackBar(content: Text('Visit: ${p.docsUrl}')),
+                          SnackBar(content: Text('Get your key: ${p.docsUrl}')),
+                        );
+                      },
+                    ),
+                  ),
+                if (p.pricingUrl.isNotEmpty)
+                  Tooltip(
+                    message: 'View pricing',
+                    child: IconButton(
+                      icon: const Icon(Icons.attach_money_rounded, size: 18),
+                      onPressed: () {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          SnackBar(content: Text('Pricing: ${p.pricingUrl}')),
                         );
                       },
                     ),
                   ),
               ],
             ),
+            if (p.pricingUrl.isNotEmpty)
+              Padding(
+                padding: const EdgeInsets.only(top: 8),
+                child: InkWell(
+                  onTap: () {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(content: Text('Open: ${p.pricingUrl}')),
+                    );
+                  },
+                  borderRadius: BorderRadius.circular(8),
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(
+                        horizontal: 12, vertical: 8),
+                    decoration: BoxDecoration(
+                      color: p.color.withValues(alpha: 0.06),
+                      borderRadius: BorderRadius.circular(8),
+                      border: Border.all(
+                          color: p.color.withValues(alpha: 0.15)),
+                    ),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Icon(Icons.open_in_new_rounded,
+                            size: 14, color: p.color),
+                        const SizedBox(width: 6),
+                        Text(
+                          'View pricing →',
+                          style: TextStyle(
+                            fontSize: 12,
+                            fontWeight: FontWeight.w600,
+                            color: p.color,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              ),
             const SizedBox(height: 16),
 
             // API Key
