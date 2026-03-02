@@ -94,6 +94,7 @@ class StorageService {
 
   // ── Settings ──
 
+  /// Legacy single-key getter (kept for backward compat).
   static String? getApiKey() {
     final box = Hive.box(_settingsBox);
     return box.get('openai_api_key') as String?;
@@ -102,6 +103,48 @@ class StorageService {
   static Future<void> setApiKey(String key) async {
     final box = Hive.box(_settingsBox);
     await box.put('openai_api_key', key);
+  }
+
+  // ── AI Provider Settings ──
+
+  static String getActiveProviderId() {
+    final box = Hive.box(_settingsBox);
+    return box.get('ai_provider_id', defaultValue: 'openai') as String;
+  }
+
+  static Future<void> setActiveProviderId(String id) async {
+    final box = Hive.box(_settingsBox);
+    await box.put('ai_provider_id', id);
+  }
+
+  static String? getProviderApiKey(String providerId) {
+    final box = Hive.box(_settingsBox);
+    return box.get('api_key_$providerId') as String?;
+  }
+
+  static Future<void> setProviderApiKey(String providerId, String key) async {
+    final box = Hive.box(_settingsBox);
+    await box.put('api_key_$providerId', key);
+  }
+
+  static String? getProviderModel(String providerId) {
+    final box = Hive.box(_settingsBox);
+    return box.get('model_$providerId') as String?;
+  }
+
+  static Future<void> setProviderModel(String providerId, String model) async {
+    final box = Hive.box(_settingsBox);
+    await box.put('model_$providerId', model);
+  }
+
+  static String? getCustomBaseUrl() {
+    final box = Hive.box(_settingsBox);
+    return box.get('custom_base_url') as String?;
+  }
+
+  static Future<void> setCustomBaseUrl(String url) async {
+    final box = Hive.box(_settingsBox);
+    await box.put('custom_base_url', url);
   }
 
   static bool getDarkMode() {
