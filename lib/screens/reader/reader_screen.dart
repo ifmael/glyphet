@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../models/book.dart';
 import '../../providers/reader_provider.dart';
+import '../../providers/reader_settings_provider.dart';
 import '../../providers/chat_provider.dart';
 import '../../providers/notes_provider.dart';
 import '../../providers/library_provider.dart';
@@ -9,6 +10,7 @@ import '../chat/chat_panel.dart';
 import '../notes/notes_screen.dart';
 import 'epub_reader_view.dart';
 import 'pdf_reader_view.dart';
+import 'reader_settings_sheet.dart';
 
 /// Main reader screen that displays book content with chat and notes panels.
 class ReaderScreen extends StatefulWidget {
@@ -49,33 +51,41 @@ class _ReaderScreenState extends State<ReaderScreen> {
       builder: (ctx) {
         final controller = TextEditingController();
         return AlertDialog(
-          title: const Text('Save Note'),
+          shape:
+              RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+          title: Row(
+            children: [
+              Icon(Icons.note_add_rounded,
+                  color: Theme.of(context).colorScheme.primary, size: 22),
+              const SizedBox(width: 8),
+              const Text('Save Note'),
+            ],
+          ),
           content: Column(
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Container(
-                padding: const EdgeInsets.all(8),
+                padding: const EdgeInsets.all(10),
                 decoration: BoxDecoration(
-                  color: Colors.amber.withValues(alpha: 0.1),
+                  color: Colors.amber.withValues(alpha: 0.08),
                   border: const Border(
                     left: BorderSide(color: Colors.amber, width: 3),
                   ),
-                  borderRadius: BorderRadius.circular(4),
+                  borderRadius: BorderRadius.circular(6),
                 ),
                 child: Text(
                   text.length > 200 ? '${text.substring(0, 200)}...' : text,
                   style: const TextStyle(
-                      fontStyle: FontStyle.italic, fontSize: 13),
+                      fontStyle: FontStyle.italic, fontSize: 13, height: 1.5),
                 ),
               ),
-              const SizedBox(height: 12),
+              const SizedBox(height: 14),
               TextField(
                 controller: controller,
                 decoration: const InputDecoration(
                   labelText: 'Your note',
                   hintText: 'Write your thoughts...',
-                  border: OutlineInputBorder(),
                 ),
                 maxLines: 3,
               ),
@@ -110,10 +120,25 @@ class _ReaderScreenState extends State<ReaderScreen> {
     );
   }
 
+  void _openSettings() {
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (_) => DraggableScrollableSheet(
+        initialChildSize: 0.75,
+        minChildSize: 0.4,
+        maxChildSize: 0.92,
+        builder: (_, scrollController) =>
+            const SingleChildScrollView(child: ReaderSettingsSheet()),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
-    return Consumer<ReaderProvider>(
-      builder: (context, reader, _) {
+    return Consumer2<ReaderProvider, ReaderSettingsProvider>(
+      builder: (context, reader, settings, _) {
         if (reader.isLoading) {
           return Scaffold(
             appBar: AppBar(title: const Text('Loading...')),
@@ -136,11 +161,12 @@ class _ReaderScreenState extends State<ReaderScreen> {
               overflow: TextOverflow.ellipsis,
             ),
             leading: IconButton(
-              icon: const Icon(Icons.arrow_back),
+              icon: const Icon(Icons.arrow_back_rounded),
               onPressed: () {
                 context.read<LibraryProvider>().updateProgress(
                       book.id,
-                      reader.currentChapter / (reader.chapters.length.clamp(1, 999999)),
+                      reader.currentChapter /
+                          (reader.chapters.length.clamp(1, 999999)),
                       reader.currentChapter,
                     );
                 reader.closeBook();
@@ -150,7 +176,14 @@ class _ReaderScreenState extends State<ReaderScreen> {
             actions: [
               if (book.format == BookFormat.epub)
                 IconButton(
-                  icon: const Icon(Icons.list),
+                  icon: Icon(
+                    _showChapters
+                        ? Icons.view_list_rounded
+                        : Icons.list_rounded,
+                    color: _showChapters
+                        ? Theme.of(context).colorScheme.primary
+                        : null,
+                  ),
                   onPressed: () =>
                       setState(() => _showChapters = !_showChapters),
                   tooltip: 'Chapters',
@@ -167,7 +200,9 @@ class _ReaderScreenState extends State<ReaderScreen> {
               ),
               IconButton(
                 icon: Icon(
-                  _showChat ? Icons.chat : Icons.chat_outlined,
+                  _showChat
+                      ? Icons.chat_rounded
+                      : Icons.chat_bubble_outline_rounded,
                   color: _showChat
                       ? Theme.of(context).colorScheme.primary
                       : null,
@@ -175,23 +210,11 @@ class _ReaderScreenState extends State<ReaderScreen> {
                 onPressed: () => setState(() => _showChat = !_showChat),
                 tooltip: 'AI Chat',
               ),
-              if (book.format == BookFormat.epub)
-                PopupMenuButton<double>(
-                  icon: const Icon(Icons.text_fields),
-                  tooltip: 'Font Size',
-                  onSelected: reader.setFontSize,
-                  itemBuilder: (_) => [14.0, 16.0, 18.0, 20.0, 24.0, 28.0]
-                      .map((s) => PopupMenuItem(
-                            value: s,
-                            child: Text('${s.toInt()}px',
-                                style: TextStyle(
-                                  fontWeight: s == reader.fontSize
-                                      ? FontWeight.bold
-                                      : FontWeight.normal,
-                                )),
-                          ))
-                      .toList(),
-                ),
+              IconButton(
+                icon: const Icon(Icons.tune_rounded),
+                onPressed: _openSettings,
+                tooltip: 'Reading Settings',
+              ),
             ],
           ),
           body: Row(
@@ -217,7 +240,7 @@ class _ReaderScreenState extends State<ReaderScreen> {
             ],
           ),
           bottomNavigationBar: book.format == BookFormat.epub
-              ? _buildChapterNav(reader)
+              ? _buildChapterNav(reader, settings)
               : null,
         );
       },
@@ -227,27 +250,28 @@ class _ReaderScreenState extends State<ReaderScreen> {
   Widget _buildChapterList(ReaderProvider reader) {
     return Container(
       decoration: BoxDecoration(
+        color: Theme.of(context).colorScheme.surface,
         border: Border(
-          right: BorderSide(
-            color: Theme.of(context).dividerColor,
-          ),
+          right: BorderSide(color: Theme.of(context).dividerColor),
         ),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Padding(
-            padding: const EdgeInsets.all(12),
+            padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
             child: Text(
               'Chapters',
-              style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                    fontWeight: FontWeight.bold,
+              style: Theme.of(context).textTheme.titleSmall?.copyWith(
+                    fontWeight: FontWeight.w800,
+                    letterSpacing: -0.3,
                   ),
             ),
           ),
           const Divider(height: 1),
           Expanded(
             child: ListView.builder(
+              padding: const EdgeInsets.symmetric(vertical: 4),
               itemCount: reader.chapters.length,
               itemBuilder: (context, index) {
                 final isSelected = index == reader.currentChapter;
@@ -257,15 +281,37 @@ class _ReaderScreenState extends State<ReaderScreen> {
                   selectedTileColor: Theme.of(context)
                       .colorScheme
                       .primary
-                      .withValues(alpha: 0.1),
-                  leading: Text(
-                    '${index + 1}',
-                    style: TextStyle(
-                      fontWeight:
-                          isSelected ? FontWeight.bold : FontWeight.normal,
+                      .withValues(alpha: 0.08),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  contentPadding:
+                      const EdgeInsets.symmetric(horizontal: 16, vertical: 2),
+                  leading: Container(
+                    width: 28,
+                    height: 28,
+                    decoration: BoxDecoration(
                       color: isSelected
                           ? Theme.of(context).colorScheme.primary
-                          : null,
+                          : Theme.of(context)
+                              .colorScheme
+                              .surfaceContainerHighest,
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    child: Center(
+                      child: Text(
+                        '${index + 1}',
+                        style: TextStyle(
+                          fontSize: 11,
+                          fontWeight: FontWeight.w700,
+                          color: isSelected
+                              ? Colors.white
+                              : Theme.of(context)
+                                  .colorScheme
+                                  .onSurface
+                                  .withValues(alpha: 0.5),
+                        ),
+                      ),
                     ),
                   ),
                   title: Text(
@@ -275,7 +321,10 @@ class _ReaderScreenState extends State<ReaderScreen> {
                     style: TextStyle(
                       fontSize: 13,
                       fontWeight:
-                          isSelected ? FontWeight.bold : FontWeight.normal,
+                          isSelected ? FontWeight.w600 : FontWeight.w400,
+                      color: isSelected
+                          ? Theme.of(context).colorScheme.primary
+                          : null,
                     ),
                   ),
                   onTap: () => reader.goToChapter(index),
@@ -307,7 +356,7 @@ class _ReaderScreenState extends State<ReaderScreen> {
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Icon(Icons.warning_amber, size: 48, color: Colors.orange),
+            Icon(Icons.warning_amber_rounded, size: 48, color: Colors.orange),
             SizedBox(height: 12),
             Text('MOBI format reader coming soon'),
             Text('Convert to EPUB for the best experience'),
@@ -317,13 +366,18 @@ class _ReaderScreenState extends State<ReaderScreen> {
     }
   }
 
-  Widget _buildChapterNav(ReaderProvider reader) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+  Widget _buildChapterNav(
+      ReaderProvider reader, ReaderSettingsProvider settings) {
+    final theme = settings.theme;
+    return AnimatedContainer(
+      duration: const Duration(milliseconds: 300),
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
       decoration: BoxDecoration(
-        color: Theme.of(context).colorScheme.surface,
+        color: theme.navBarColor,
         border: Border(
-          top: BorderSide(color: Theme.of(context).dividerColor),
+          top: BorderSide(
+            color: theme.textColor.withValues(alpha: 0.08),
+          ),
         ),
       ),
       child: Row(
@@ -332,19 +386,48 @@ class _ReaderScreenState extends State<ReaderScreen> {
           TextButton.icon(
             onPressed:
                 reader.currentChapter > 0 ? reader.previousChapter : null,
-            icon: const Icon(Icons.chevron_left),
-            label: const Text('Previous'),
+            icon: Icon(Icons.chevron_left_rounded,
+                color: reader.currentChapter > 0
+                    ? theme.accentColor
+                    : theme.navBarTextColor.withValues(alpha: 0.3)),
+            label: Text('Previous',
+                style: TextStyle(
+                  color: reader.currentChapter > 0
+                      ? theme.accentColor
+                      : theme.navBarTextColor.withValues(alpha: 0.3),
+                  fontWeight: FontWeight.w500,
+                )),
           ),
-          Text(
-            'Chapter ${reader.currentChapter + 1} / ${reader.chapters.length}',
-            style: Theme.of(context).textTheme.bodySmall,
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+            decoration: BoxDecoration(
+              color: theme.accentColor.withValues(alpha: 0.1),
+              borderRadius: BorderRadius.circular(12),
+            ),
+            child: Text(
+              '${reader.currentChapter + 1} / ${reader.chapters.length}',
+              style: TextStyle(
+                color: theme.navBarTextColor,
+                fontSize: 12,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
           ),
           TextButton.icon(
             onPressed: reader.currentChapter < reader.chapters.length - 1
                 ? reader.nextChapter
                 : null,
-            icon: const Icon(Icons.chevron_right),
-            label: const Text('Next'),
+            icon: Icon(Icons.chevron_right_rounded,
+                color: reader.currentChapter < reader.chapters.length - 1
+                    ? theme.accentColor
+                    : theme.navBarTextColor.withValues(alpha: 0.3)),
+            label: Text('Next',
+                style: TextStyle(
+                  color: reader.currentChapter < reader.chapters.length - 1
+                      ? theme.accentColor
+                      : theme.navBarTextColor.withValues(alpha: 0.3),
+                  fontWeight: FontWeight.w500,
+                )),
           ),
         ],
       ),

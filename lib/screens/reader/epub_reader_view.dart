@@ -1,9 +1,11 @@
 import 'package:flutter/material.dart';
+import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
 import 'package:flutter_widget_from_html_core/flutter_widget_from_html_core.dart';
 import '../../providers/reader_provider.dart';
+import '../../providers/reader_settings_provider.dart';
 
-/// Renders EPUB chapter content as styled HTML with text selection support.
+/// Renders EPUB chapter content with customizable reading themes.
 class EpubReaderView extends StatelessWidget {
   final ValueChanged<String> onTextSelected;
   final ValueChanged<String> onSendToChat;
@@ -18,57 +20,79 @@ class EpubReaderView extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Consumer<ReaderProvider>(
-      builder: (context, reader, _) {
+    return Consumer2<ReaderProvider, ReaderSettingsProvider>(
+      builder: (context, reader, settings, _) {
         final chapter = reader.currentChapterContent;
         if (chapter == null) {
-          return const Center(child: Text('No content available'));
+          return Center(
+            child: Text(
+              'No content available',
+              style: TextStyle(color: settings.theme.textColor),
+            ),
+          );
         }
 
-        final styledHtml = _wrapWithStyles(chapter.htmlContent, reader.fontSize, context);
+        final styledHtml = _wrapWithStyles(
+          chapter.htmlContent,
+          settings,
+        );
 
-        return SelectionArea(
-          contextMenuBuilder: (context, selectableRegionState) {
-            return _buildContextMenu(context, selectableRegionState);
-          },
-          onSelectionChanged: (selection) {
-            if (selection != null) {
-              final text = selection.plainText;
-              if (text.isNotEmpty) {
-                onTextSelected(text);
+        return AnimatedContainer(
+          duration: const Duration(milliseconds: 300),
+          color: settings.theme.backgroundColor,
+          child: SelectionArea(
+            contextMenuBuilder: (context, selectableRegionState) {
+              return _buildContextMenu(context, selectableRegionState);
+            },
+            onSelectionChanged: (selection) {
+              if (selection != null) {
+                final text = selection.plainText;
+                if (text.isNotEmpty) {
+                  onTextSelected(text);
+                }
               }
-            }
-          },
-          child: SingleChildScrollView(
-            padding: const EdgeInsets.all(24),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Container(
-                  width: double.infinity,
-                  padding: const EdgeInsets.only(bottom: 16),
-                  decoration: const BoxDecoration(
-                    border: Border(
-                      bottom: BorderSide(color: Colors.grey, width: 0.5),
+            },
+            child: SingleChildScrollView(
+              padding: const EdgeInsets.symmetric(horizontal: 28, vertical: 32),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Container(
+                    width: double.infinity,
+                    padding: const EdgeInsets.only(bottom: 20),
+                    decoration: BoxDecoration(
+                      border: Border(
+                        bottom: BorderSide(
+                          color: settings.theme.textColor.withValues(alpha: 0.12),
+                          width: 0.5,
+                        ),
+                      ),
+                    ),
+                    child: Text(
+                      chapter.title,
+                      style: GoogleFonts.getFont(
+                        settings.fontFamily,
+                        fontSize: settings.fontSize * 1.4,
+                        fontWeight: FontWeight.w700,
+                        color: settings.theme.chapterTitleColor,
+                        letterSpacing: -0.5,
+                        height: 1.2,
+                      ),
                     ),
                   ),
-                  child: Text(
-                    chapter.title,
-                    style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-                          fontWeight: FontWeight.bold,
-                        ),
+                  const SizedBox(height: 28),
+                  HtmlWidget(
+                    styledHtml,
+                    textStyle: GoogleFonts.getFont(
+                      settings.fontFamily,
+                      fontSize: settings.fontSize,
+                      height: settings.lineHeight,
+                      color: settings.effectiveTextColor,
+                    ),
                   ),
-                ),
-                const SizedBox(height: 20),
-                HtmlWidget(
-                  styledHtml,
-                  textStyle: TextStyle(
-                    fontSize: reader.fontSize,
-                    height: 1.6,
-                  ),
-                ),
-                const SizedBox(height: 60),
-              ],
+                  const SizedBox(height: 80),
+                ],
+              ),
             ),
           ),
         );
@@ -110,20 +134,28 @@ class EpubReaderView extends StatelessWidget {
     );
   }
 
-  String _wrapWithStyles(String html, double fontSize, BuildContext context) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
-    final textColor = isDark ? '#E0E0E0' : '#333333';
-    final bgColor = isDark ? '#1E1E1E' : '#FFFFFF';
+  String _wrapWithStyles(String html, ReaderSettingsProvider settings) {
+    final textColor = _colorToHex(settings.effectiveTextColor);
+    final bgColor = _colorToHex(settings.theme.backgroundColor);
 
     return '''
       <div style="
-        font-size: ${fontSize}px;
-        line-height: 1.8;
+        font-size: ${settings.fontSize}px;
+        line-height: ${settings.lineHeight};
         color: $textColor;
         background-color: $bgColor;
-        max-width: 800px;
+        max-width: 760px;
         margin: 0 auto;
+        word-spacing: 0.5px;
+        letter-spacing: 0.2px;
       ">$html</div>
     ''';
+  }
+
+  String _colorToHex(Color color) {
+    final r = (color.r * 255).round();
+    final g = (color.g * 255).round();
+    final b = (color.b * 255).round();
+    return '#${r.toRadixString(16).padLeft(2, '0')}${g.toRadixString(16).padLeft(2, '0')}${b.toRadixString(16).padLeft(2, '0')}';
   }
 }

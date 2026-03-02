@@ -6,6 +6,7 @@ import 'providers/reader_provider.dart';
 import 'providers/chat_provider.dart';
 import 'providers/notes_provider.dart';
 import 'providers/theme_provider.dart';
+import 'providers/reader_settings_provider.dart';
 import 'config/theme.dart';
 import 'screens/library/library_screen.dart';
 
@@ -25,6 +26,8 @@ class GlyphetApp extends StatelessWidget {
     return MultiProvider(
       providers: [
         ChangeNotifierProvider(create: (_) => ThemeProvider()..loadTheme()),
+        ChangeNotifierProvider(
+            create: (_) => ReaderSettingsProvider()..loadSettings()),
         ChangeNotifierProvider(create: (_) => LibraryProvider()),
         ChangeNotifierProvider(create: (_) => ReaderProvider()),
         ChangeNotifierProvider(create: (_) => ChatProvider()),
