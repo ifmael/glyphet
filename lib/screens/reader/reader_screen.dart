@@ -5,6 +5,7 @@ import '../../providers/reader_provider.dart';
 import '../../providers/reader_settings_provider.dart';
 import '../../providers/chat_provider.dart';
 import '../../providers/notes_provider.dart';
+import '../../providers/markup_provider.dart';
 import '../../providers/library_provider.dart';
 import '../chat/chat_panel.dart';
 import '../notes/notes_screen.dart';
@@ -32,6 +33,7 @@ class _ReaderScreenState extends State<ReaderScreen> {
       if (reader.currentBook != null) {
         context.read<ChatProvider>().loadMessages(reader.currentBook!.id);
         context.read<NotesProvider>().loadNotes(bookId: reader.currentBook!.id);
+        context.read<MarkupProvider>().loadMarkups(reader.currentBook!.id);
       }
     });
   }

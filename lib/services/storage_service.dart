@@ -2,6 +2,7 @@ import 'package:hive_flutter/hive_flutter.dart';
 import '../models/book.dart';
 import '../models/note.dart';
 import '../models/chat_message.dart';
+import '../models/text_markup.dart';
 
 /// Manages local persistence using Hive (works on all platforms including web).
 class StorageService {
@@ -9,6 +10,7 @@ class StorageService {
   static const String _notesBox = 'notes';
   static const String _chatBox = 'chat_messages';
   static const String _settingsBox = 'settings';
+  static const String _markupsBox = 'markups';
 
   static Future<void> initialize() async {
     await Hive.initFlutter();
@@ -16,6 +18,7 @@ class StorageService {
     await Hive.openBox(_notesBox);
     await Hive.openBox(_chatBox);
     await Hive.openBox(_settingsBox);
+    await Hive.openBox(_markupsBox);
   }
 
   // ── Books ──
@@ -161,5 +164,26 @@ class StorageService {
   static Future<void> setReaderLineHeight(double height) async {
     final box = Hive.box(_settingsBox);
     await box.put('reader_line_height', height);
+  }
+
+  // ── Text Markups ──
+
+  static List<TextMarkup> getMarkups({required String bookId}) {
+    final box = Hive.box(_markupsBox);
+    return box.values
+        .map((v) => TextMarkup.fromMap(Map<dynamic, dynamic>.from(v as Map)))
+        .where((m) => m.bookId == bookId)
+        .toList()
+      ..sort((a, b) => a.createdAt.compareTo(b.createdAt));
+  }
+
+  static Future<void> saveMarkup(TextMarkup markup) async {
+    final box = Hive.box(_markupsBox);
+    await box.put(markup.id, markup.toMap());
+  }
+
+  static Future<void> deleteMarkup(String id) async {
+    final box = Hive.box(_markupsBox);
+    await box.delete(id);
   }
 }
